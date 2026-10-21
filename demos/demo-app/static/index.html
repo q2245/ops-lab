@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ops Lab 控制台</title>
+  <style>
+    :root {
+      --ink: #e7edf7;
+      --muted: #93a2b8;
+      --line: #223147;
+      --panel: #131d2c;
+      --panel-soft: #172335;
+      --accent: #37e3a5;
+      --accent-2: #59a6ff;
+      --warning: #ffcf6b;
+      --danger: #ff7a7a;
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font: 14px/1.45 ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+      background: #0a1017;
+    }
+
+    .app {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 28px 24px 44px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 24px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border: 1px solid #2b405b;
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      background: #172335;
+      color: var(--accent);
+      font-weight: 650;
+    }
+
+    .brand-title { font-size: 18px; font-weight: 650; margin: 0; }
+    .brand-sub { color: var(--muted); font-size: 12px; margin: 1px 0 0; }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+
+    .dot.ok { background: var(--accent); box-shadow: 0 0 0 3px rgba(55, 227, 165, .12); }
+    .dot.bad { background: var(--danger); box-shadow: 0 0 0 3px rgba(255, 122, 122, .12); }
+
+    .hero {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: linear-gradient(120deg, #111b28, #16263b);
+      padding: 30px;
+      margin-bottom: 18px;
+    }
+
+    .hero h1 { margin: 0 0 10px; font-size: clamp(24px, 4vw, 38px); line-height: 1.1; letter-spacing: 0; }
+    .hero h1 span { color: var(--accent); }
+    .hero p { max-width: 620px; margin: 0; color: #b8c5d6; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .metric {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    .metric span { display: block; color: var(--muted); font-size: 12px; }
+    .metric strong { display: block; margin-top: 7px; font-size: 22px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+    .metric small { display: block; margin-top: 3px; color: #71829a; font-size: 11px; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 380px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      overflow: hidden;
+    }
+
+    .panel + .panel { margin-top: 16px; }
+
+    .panel-head {
+      min-height: 46px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel-soft);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .panel-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
+    .panel-head span { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .panel-body { padding: 16px; }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    button {
+      min-height: 38px;
+      border: 1px solid #2b405b;
+      border-radius: 6px;
+      color: var(--ink);
+      background: #1d2b40;
+      font: inherit;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    button:hover { background: #243650; border-color: #3d5a7d; }
+    button:disabled { opacity: .55; cursor: wait; }
+    button.primary { background: #17493a; border-color: #23634f; color: #c8ffe9; }
+    button.primary:hover { background: #1a5a48; border-color: #2d7a64; }
+    button.warn { background: #45361b; border-color: #66491d; color: #ffe9bb; }
+    button.warn:hover { background: #52401f; border-color: #7d5a24; }
+    button.danger { background: #4a2525; border-color: #6d3232; color: #ffdede; }
+    button.danger:hover { background: #5a2b2b; border-color: #873b3b; }
+
+    .events { margin: 0; padding: 0; list-style: none; max-height: 230px; overflow: auto; }
+    .events li { display: flex; gap: 12px; padding: 9px 0; border-bottom: 1px solid #1e2b3e; }
+    .events li:last-child { border-bottom: 0; }
+    .events time { flex: 0 0 66px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .events span { min-width: 0; color: #c9d5e4; }
+    .events .empty { color: var(--muted); }
+    .events code { color: var(--accent-2); }
+
+    .links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+
+    .link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 44px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel-soft);
+      color: var(--ink);
+      text-decoration: none;
+    }
+
+    .link:hover { border-color: #36567a; background: #1d2b40; }
+    .link small { color: var(--muted); font-size: 11px; white-space: nowrap; }
+
+    .hint {
+      margin: 14px 0 0;
+      padding: 12px;
+      border: 1px solid #264056;
+      border-radius: 6px;
+      color: #a9bcd2;
+      background: #142132;
+      font-size: 12px;
+    }
+
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .hero { padding: 24px; }
+    }
+
+    @media (max-width: 560px) {
+      .app { padding: 20px 14px 32px; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .controls { grid-template-columns: 1fr; }
+      .links { grid-template-columns: 1fr; }
+      .metric strong { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">OL</div>
+        <div>
+          <h1 class="brand-title">Ops Lab 控制台</h1>
+          <p class="brand-sub">指标 · 日志 · 链路 · 故障注入</p>
+        </div>
+      </div>
+      <div class="status" id="pod-status">
+        <i class="dot" id="status-dot"></i>
+        <span id="pod-name">检查中</span>
+      </div>
+    </header>
+
+    <section class="hero">
+      <h1>把 <span>可观测性</span> 变成可操作的训练场</h1>
+      <p>这里保留健康检查 JSON，同时把常用实验动作集中到一页。你可以在 Grafana 里观察下面的每个请求如何改变指标、日志和告警。</p>
+    </section>
+
+    <section class="metrics" aria-label="本地指标概览">
+      <article class="metric"><span>请求总数</span><strong id="req-total">--</strong><small>demo_http_requests_total</small></article>
+      <article class="metric"><span>5 分钟 QPS</span><strong id="req-rate">--</strong><small>rate / 300s</small></article>
+      <article class="metric"><span>错误率</span><strong id="error-rate">--</strong><small>5xx / total</small></article>
+      <article class="metric"><span>P95 延迟</span><strong id="p95-latency">--</strong><small>histogram_quantile</small></article>
+    </section>
+
+    <section class="layout">
+      <div>
+        <article class="panel">
+          <div class="panel-head">
+            <h2>实验操作</h2>
+            <span>请求会立即进入 metrics</span>
+          </div>
+          <div class="panel-body">
+            <div class="controls">
+              <button class="primary" id="normal-btn">正常请求</button>
+              <button class="warn" id="slow-btn">慢请求</button>
+              <button class="danger" id="error-btn">错误请求</button>
+              <button id="stress-btn">10 次混合</button>
+            </div>
+            <p class="hint">慢请求大约需要 1.5-2.5 秒。错误请求会推高 5xx 比例；持续触发后去 Alertmanager 观察规则是否命中。</p>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>最近请求</h2>
+            <span id="last-request">尚未执行</span>
+          </div>
+          <div class="panel-body">
+            <ul class="events" id="events">
+              <li class="empty"><time> waiting </time><span>还没有请求记录</span></li>
+            </ul>
+          </div>
+        </article>
+      </div>
+
+      <aside>
+        <article class="panel">
+          <div class="panel-head">
+            <h2>观测入口</h2>
+            <span>本机端口</span>
+          </div>
+          <div class="panel-body">
+            <nav class="links">
+              <a class="link" href="http://localhost:3000" target="_blank" rel="noreferrer">Grafana<small>3000</small></a>
+              <a class="link" href="http://localhost:9090" target="_blank" rel="noreferrer">Prometheus<small>9090</small></a>
+              <a class="link" href="http://localhost:9093" target="_blank" rel="noreferrer">Alertmanager<small>9093</small></a>
+              <a class="link" href="http://localhost:16686" target="_blank" rel="noreferrer">Jaeger<small>16686</small></a>
+              <a class="link" href="/metrics">/metrics<small>当前应用</small></a>
+              <a class="link" href="/healthz">/healthz<small>当前应用</small></a>
+            </nav>
+          </div>
+        </article>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const events = [];
+    const maxEvents = 12;
+    const healthUrl = '/healthz';
+
+    const el = id => document.getElementById(id);
+
+    function now() {
+      return new Date().toLocaleTimeString('zh-CN', { hour12: false });
+    }
+
+    function renderEvents() {
+      const list = el('events');
+      list.innerHTML = '';
+      events.forEach(item => {
+        const li = document.createElement('li');
+        const time = document.createElement('time');
+        const text = document.createElement('span');
+        time.textContent = item.time;
+        text.innerHTML = item.text;
+        li.append(time, text);
+        list.append(li);
+      });
+      if (!events.length) {
+        list.innerHTML = '<li class="empty"><time> waiting </time><span>还没有请求记录</span></li>';
+      }
+    }
+
+    function addEvent(text) {
+      events.unshift({ time: now(), text });
+      if (events.length > maxEvents) events.pop();
+      renderEvents();
+    }
+
+    function setBusy(key, busy) {
+      const button = el(key);
+      if (button) button.disabled = busy;
+    }
+
+    async function request(path, label, buttonKey) {
+      setBusy(buttonKey, true);
+      el('last-request').textContent = '执行中';
+      const start = performance.now();
+      try {
+        const response = await fetch(path, { cache: 'no-store' });
+        const elapsed = Math.round(performance.now() - start);
+        const tone = response.ok ? 'ok' : 'bad';
+        addEvent(`<code>${path}</code> -> <code>${response.status}</code>，耗时 ${elapsed}ms`);
+        el('last-request').textContent = `${label} ${response.status}`;
+        el('last-request').dataset.tone = tone;
+      } catch (error) {
+        addEvent(`<code>${path}</code> -> 网络异常`);
+        el('last-request').textContent = '请求失败';
+      } finally {
+        setBusy(buttonKey, false);
+        await refreshMetrics();
+      }
+    }
+
+    async function mixedLoad() {
+      setBusy('stress-btn', true);
+      el('last-request').textContent = '混合压测中';
+      const actions = ['/error', '/slow', '/error', '/', '/', '/', '/error', '/', '/', '/slow'];
+      const results = await Promise.allSettled(actions.map(path => fetch(path, { cache: 'no-store' })));
+      const okCount = results.filter(item => item.status === 'fulfilled' && item.value.ok).length;
+      const badCount = results.length - okCount;
+      addEvent(`<code>mixed</code> -> 成功 ${okCount}，失败 ${badCount}`);
+      el('last-request').textContent = `混合压测 ${okCount}/${results.length}`;
+      setBusy('stress-btn', false);
+      await refreshMetrics();
+    }
+
+    async function queryRange(query, parse) {
+      const encoded = encodeURIComponent(query);
+      const response = await fetch(`http://localhost:9090/api/v1/query?query=${encoded}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Prometheus unavailable');
+      const body = await response.json();
+      const value = body.data?.result?.[0]?.value?.[1];
+      return parse ? parse(value) : value;
+    }
+
+    async function refreshMetrics() {
+      try {
+        const [total, rate, errorRate, p95] = await Promise.all([
+          queryRange('sum(demo_http_requests_total)'),
+          queryRange('sum(rate(demo_http_requests_total[5m]))'),
+          queryRange('100 * sum(rate(demo_http_requests_total{status=~"5.."}[5m])) / sum(rate(demo_http_requests_total[5m]))'),
+          queryRange('histogram_quantile(0.95, sum by (le) (rate(demo_http_request_duration_seconds_bucket[5m])))')
+        ]);
+        el('req-total').textContent = formatNumber(total, 0);
+        el('req-rate').textContent = formatNumber(rate, 2);
+        el('error-rate').textContent = formatNumber(errorRate, 1) + '%';
+        el('p95-latency').textContent = formatNumber(p95, 2) + 's';
+      } catch (error) {
+        ['req-total', 'req-rate', 'error-rate', 'p95-latency'].forEach(id => el(id).textContent = '--');
+      }
+    }
+
+    function formatNumber(value, digits) {
+      if (value === undefined || value === null) return '--';
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed)) return '--';
+      return parsed.toFixed(digits);
+    }
+
+    async function refreshPod() {
+      try {
+        const response = await fetch(healthUrl, { cache: 'no-store' });
+        const body = await response.json();
+        el('status-dot').className = 'dot ok';
+        el('pod-name').textContent = body.pod ? `ready · ${body.pod}` : 'ready';
+      } catch (error) {
+        el('status-dot').className = 'dot bad';
+        el('pod-name').textContent = 'unready';
+      }
+    }
+
+    el('normal-btn').addEventListener('click', () => request('/', '正常请求', 'normal-btn'));
+    el('slow-btn').addEventListener('click', () => request('/slow', '慢请求', 'slow-btn'));
+    el('error-btn').addEventListener('click', () => request('/error', '错误请求', 'error-btn'));
+    el('stress-btn').addEventListener('click', mixedLoad);
+
+    refreshPod();
+    refreshMetrics();
+    setInterval(refreshPod, 10000);
+    setInterval(refreshMetrics, 15000);
+  </script>
+</body>
+</html>

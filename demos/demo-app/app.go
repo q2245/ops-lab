@@ -1,16 +1,18 @@
 // 演示应用：练习监控、日志、链路追踪时用的靶子
 //
 // 接口
-//   GET /healthz   健康检查
-//   GET /readyz    就绪检查
-//   GET /slow      人为制造约 2 秒延迟
-//   GET /error     人为返回 500
-//   GET /          正常请求，产生指标 + 日志
-//   GET /metrics   Prometheus 抓取入口
-//   POST /alerts   接收 Alertmanager / Grafana webhook
+//
+//	GET /healthz   健康检查
+//	GET /readyz    就绪检查
+//	GET /slow      人为制造约 2 秒延迟
+//	GET /error     人为返回 500
+//	GET /          正常请求，产生指标 + 日志
+//	GET /metrics   Prometheus 抓取入口
+//	POST /alerts   接收 Alertmanager / Grafana webhook
 package main
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -22,6 +24,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
+
+//go:embed static
+var staticFS embed.FS
 
 var (
 	requestCount = prometheus.NewCounterVec(
@@ -52,6 +57,13 @@ func (r *statusRecorder) WriteHeader(code int) {
 	r.ResponseWriter.WriteHeader(code)
 }
 
+func (r *statusRecorder) Write(bytes []byte) (int, error) {
+	if r.status == 0 {
+		r.status = 200
+	}
+	return r.ResponseWriter.Write(bytes)
+}
+
 func instrument(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		start := time.Now()
@@ -66,13 +78,23 @@ func instrument(next http.HandlerFunc) http.HandlerFunc {
 func main() {
 	mux := http.NewServeMux()
 
+	page, err := staticFS.ReadFile("static/index.html")
+	if err != nil {
+		log.Fatalf("read embedded index: %v", err)
+	}
+
+	assets := http.FileServer(http.FS(staticFS))
+	mux.Handle("/static/", http.StripPrefix("/static/", assets))
+
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
 			return
 		}
-		log.Printf("trace_id=%s handled GET /", fakeTraceID())
-		writeJSON(w, 200, map[string]any{"ok": true, "pod": hostname()})
+		log.Printf("trace_id=%s handled GET / page", fakeTraceID())
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-store")
+		_, _ = w.Write(page)
 	})
 
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {

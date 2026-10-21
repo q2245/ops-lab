@@ -1,5 +1,5 @@
 # 快捷命令
-COMPOSE := docker compose -f compose/docker-compose.yml --env-file .env
+COMPOSE := docker compose --project-directory $(CURDIR) -f $(CURDIR)/compose/docker-compose.yml --env-file $(CURDIR)/.env
 PROFILE ?= core
 
 .PHONY: up down status ps logs k8s k8s-delete clean help
@@ -29,7 +29,7 @@ stress:
 	bash scripts/stress.sh 60 http://localhost:8081
 
 clean:
-	docker compose -f compose/docker-compose.yml --profile core --profile logs --profile tracing --profile lb --profile redis --profile redis-ha --profile redis-cluster --profile db --profile mq --profile cicd --profile linux down -v
+	$(COMPOSE) --profile core --profile logs --profile tracing --profile lb --profile redis --profile redis-ha --profile redis-cluster --profile db --profile mq --profile cicd --profile linux down -v
 
 help:
 	@echo "make up PROFILE=core      启动 core（可观测性）"

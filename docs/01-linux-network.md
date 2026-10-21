@@ -36,10 +36,10 @@ tcpdump -i any port 80
 
 ## 动手练习
 
-1. 在 toolbox 里 `tcpdump -i any port 80 -w /tmp/a.pcap`，同时另一个终端访问 `http://localhost:8080/`，然后用 `tcpdump -r /tmp/a.pcap -nn` 读包。
+1. 在 toolbox 里 `tcpdump -i any port 80 -w /tmp/a.pcap`，同时另一个终端访问 `http://localhost:18080/`，然后用 `tcpdump -r /tmp/a.pcap -nn` 读包。
 2. 用 `ss -tunlp | grep 8080` 确认端口监听，理解 LISTEN 和 ESTABLISHED 的区别。
 3. 用 `dig +trace google.com` 完整跟踪一次 DNS 解析过程。
-4. 用 `curl -v http://localhost:8080/` 观察 TCP 三次握手、HTTP 请求头、响应码。
+4. 用 `curl -v http://localhost:18080/` 观察 TCP 三次握手、HTTP 请求头、响应码。
 
 ## 关键概念
 

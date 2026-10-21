@@ -34,9 +34,9 @@ services:
     ports:
       - "${PROMETHEUS_PORT}:9090"
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./prometheus/rules:/etc/prometheus/rules:ro
-      - ./prometheus/targets:/etc/prometheus/targets:ro
+      - /Users/springchang/Downloads/ops-lab/compose/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - /Users/springchang/Downloads/ops-lab/compose/prometheus/rules:/etc/prometheus/rules:ro
+      - /Users/springchang/Downloads/ops-lab/compose/prometheus/targets:/etc/prometheus/targets:ro
       - prometheus-data:/prometheus
     networks: [ops]
 
@@ -50,7 +50,7 @@ services:
     ports:
       - "${ALERTMANAGER_PORT}:9093"
     volumes:
-      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - /Users/springchang/Downloads/ops-lab/compose/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager-data:/alertmanager
     networks: [ops]
 
@@ -67,8 +67,8 @@ services:
     ports:
       - "${GRAFANA_PORT}:3000"
     volumes:
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - /Users/springchang/Downloads/ops-lab/compose/grafana/provisioning:/etc/grafana/provisioning:ro
+      - /Users/springchang/Downloads/ops-lab/compose/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
     depends_on: [prometheus, loki]
     networks: [ops]
@@ -108,7 +108,7 @@ services:
     profiles: ["core"]
     command: ["--config.file=/etc/blackbox/blackbox.yml"]
     volumes:
-      - ./prometheus/blackbox.yml:/etc/blackbox/blackbox.yml:ro
+      - /Users/springchang/Downloads/ops-lab/compose/prometheus/blackbox.yml:/etc/blackbox/blackbox.yml:ro
     networks: [ops]
 
   # =====================================================================
@@ -122,7 +122,7 @@ services:
     ports:
       - "${LOKI_PORT}:3100"
     volumes:
-      - ./loki/loki.yml:/etc/loki/loki.yml:ro
+      - /Users/springchang/Downloads/ops-lab/compose/loki/loki.yml:/etc/loki/loki.yml:ro
       - loki-data:/loki
     networks: [ops]
 
@@ -136,7 +136,7 @@ services:
       - --server.http.listen-addr=0.0.0.0:12345
       - --storage.path=/var/lib/alloy/data
     volumes:
-      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /Users/springchang/Downloads/ops-lab/compose/alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - alloy-data:/var/lib/alloy/data
     depends_on: [loki]
@@ -162,7 +162,7 @@ services:
       - "${OTLP_GRPC_PORT}:4317"
       - "${OTLP_HTTP_PORT}:4318"
     volumes:
-      - ./otel/config.yml:/etc/otel/config.yml:ro
+      - /Users/springchang/Downloads/ops-lab/compose/otel/config.yml:/etc/otel/config.yml:ro
     depends_on: [jaeger]
     networks: [ops]
 
@@ -176,8 +176,7 @@ services:
     ports:
       - "${NGINX_PORT}:80"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - /Users/springchang/Downloads/ops-lab/compose/nginx/conf.d:/etc/nginx/conf.d:ro
     networks: [ops]
 
   haproxy:
@@ -188,7 +187,7 @@ services:
       - "80:80"
       - "${HAPROXY_STATS_PORT}:8404"
     volumes:
-      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - /Users/springchang/Downloads/ops-lab/compose/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     networks: [ops]
 
   # 被负载均衡的后端，用于练习 upstream / 健康检查 / 会话保持
@@ -199,7 +198,7 @@ services:
     environment:
       BACKEND_NAME: backend-a
     volumes:
-      - ./nginx/backend:/usr/share/nginx/html:ro
+      - /Users/springchang/Downloads/ops-lab/compose/nginx/backend:/usr/share/nginx/html:ro
     networks: [ops]
 
   backend-b:
@@ -209,7 +208,7 @@ services:
     environment:
       BACKEND_NAME: backend-b
     volumes:
-      - ./nginx/backend:/usr/share/nginx/html:ro
+      - /Users/springchang/Downloads/ops-lab/compose/nginx/backend:/usr/share/nginx/html:ro
     networks: [ops]
 
   # =====================================================================
@@ -223,7 +222,7 @@ services:
     ports:
       - "${REDIS_PORT}:6379"
     volumes:
-      - ./redis/single/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - /Users/springchang/Downloads/ops-lab/compose/redis/single/redis.conf:/usr/local/etc/redis/redis.conf:ro
       - redis-data:/data
     networks: [ops]
 
@@ -236,7 +235,7 @@ services:
     profiles: ["redis-ha"]
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     volumes:
-      - ./redis/sentinel/redis-master.conf:/usr/local/etc/redis/redis.conf:ro
+      - /Users/springchang/Downloads/ops-lab/compose/redis/sentinel/redis-master.conf:/usr/local/etc/redis/redis.conf:ro
       - redis-master-data:/data
     networks: [ops]
 
@@ -246,7 +245,7 @@ services:
     profiles: ["redis-ha"]
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     volumes:
-      - ./redis/sentinel/redis-replica.conf:/usr/local/etc/redis/redis.conf:ro
+      - /Users/springchang/Downloads/ops-lab/compose/redis/sentinel/redis-replica.conf:/usr/local/etc/redis/redis.conf:ro
       - redis-replica-1-data:/data
     depends_on: [redis-master]
     networks: [ops]
@@ -257,7 +256,7 @@ services:
     profiles: ["redis-ha"]
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     volumes:
-      - ./redis/sentinel/redis-replica.conf:/usr/local/etc/redis/redis.conf:ro
+      - /Users/springchang/Downloads/ops-lab/compose/redis/sentinel/redis-replica.conf:/usr/local/etc/redis/redis.conf:ro
       - redis-replica-2-data:/data
     depends_on: [redis-master]
     networks: [ops]
@@ -268,7 +267,7 @@ services:
     profiles: ["redis-ha"]
     command: ["redis-sentinel", "/etc/sentinel/sentinel.conf"]
     volumes:
-      - ./redis/sentinel/sentinel.conf:/etc/sentinel/sentinel.conf:ro
+      - /Users/springchang/Downloads/ops-lab/compose/redis/sentinel/sentinel.conf:/etc/sentinel/sentinel.conf:ro
     depends_on: [redis-master, redis-replica-1, redis-replica-2]
     networks: [ops]
 
@@ -278,7 +277,7 @@ services:
     profiles: ["redis-ha"]
     command: ["redis-sentinel", "/etc/sentinel/sentinel.conf"]
     volumes:
-      - ./redis/sentinel/sentinel.conf:/etc/sentinel/sentinel.conf:ro
+      - /Users/springchang/Downloads/ops-lab/compose/redis/sentinel/sentinel.conf:/etc/sentinel/sentinel.conf:ro
     depends_on: [redis-master, redis-replica-1, redis-replica-2]
     networks: [ops]
 
@@ -288,7 +287,7 @@ services:
     profiles: ["redis-ha"]
     command: ["redis-sentinel", "/etc/sentinel/sentinel.conf"]
     volumes:
-      - ./redis/sentinel/sentinel.conf:/etc/sentinel/sentinel.conf:ro
+      - /Users/springchang/Downloads/ops-lab/compose/redis/sentinel/sentinel.conf:/etc/sentinel/sentinel.conf:ro
     depends_on: [redis-master, redis-replica-1, redis-replica-2]
     networks: [ops]
 
@@ -311,7 +310,7 @@ services:
     profiles: ["redis-cluster"]
     entrypoint: ["/bin/sh", "/scripts/cluster-init.sh"]
     volumes:
-      - ./redis/cluster:/scripts:ro
+      - /Users/springchang/Downloads/ops-lab/compose/redis/cluster:/scripts:ro
     depends_on:
       - rc-1
       - rc-2
@@ -376,7 +375,7 @@ services:
       - "${MYSQL_PORT}:3306"
     volumes:
       - mysql-data:/var/lib/mysql
-      - ./mysql/conf.d:/etc/mysql/conf.d:ro
+      - /Users/springchang/Downloads/ops-lab/compose/mysql/conf.d:/etc/mysql/conf.d:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
@@ -395,7 +394,7 @@ services:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      - /Users/springchang/Downloads/ops-lab/compose/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -528,7 +527,7 @@ services:
     working_dir: /app
     command: ["sh", "-c", "go mod tidy && go run ."]
     volumes:
-      - ../demos/demo-app:/app
+      - /Users/springchang/Downloads/ops-lab/demos/demo-app:/app
       - go-mod-cache:/go/pkg/mod
     profiles: ["core", "tracing"]
     environment:

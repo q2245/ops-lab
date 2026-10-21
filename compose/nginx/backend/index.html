@@ -1,12 +1,291 @@
 <!doctype html>
-<html lang="zh">
-  <head>
-    <meta charset="utf-8" />
-    <title>ops-lab backend</title>
-  </head>
-  <body>
-    <h1>ops-lab backend</h1>
-    <p>由 Nginx upstream 转发到这里。</p>
-    <p>反复刷新，观察请求落在哪个后端；停掉一个后端，观察被动健康检查的效果。</p>
-  </body>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nginx 负载均衡实验台</title>
+  <style>
+    :root {
+      --ink: #eef4fb;
+      --muted: #96a8bd;
+      --line: #24374f;
+      --panel: #122030;
+      --panel-soft: #182a3d;
+      --accent: #7fd7ff;
+      --danger: #ff8585;
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background: #08101a;
+      font: 14px/1.45 ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    }
+
+    .shell {
+      width: min(940px, 100%);
+      margin: 0 auto;
+      padding: 32px 24px 44px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .badge {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .badge i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+
+    h1 { margin: 0; font-size: clamp(22px, 4vw, 32px); line-height: 1.15; letter-spacing: 0; }
+    .lead { max-width: 640px; margin: 10px 0 24px; color: #b6c7d9; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .card {
+      min-width: 0;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    .card span { display: block; color: var(--muted); font-size: 12px; }
+    .card strong { display: block; margin-top: 8px; font-size: 22px; font-variant-numeric: tabular-nums; }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      min-height: 46px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel-soft);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .panel-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
+    .panel-head span { color: var(--muted); font-size: 12px; }
+    .panel-body { padding: 16px; }
+
+    .actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+
+    button {
+      min-height: 40px;
+      border: 1px solid #2c4b65;
+      border-radius: 6px;
+      background: #1c3348;
+      color: var(--ink);
+      font: inherit;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    button:hover { background: #23405a; border-color: #3f6a8b; }
+    button:disabled { opacity: .55; cursor: wait; }
+    button.danger { background: #472929; border-color: #683636; color: #ffdcdc; }
+    button.danger:hover { background: #552f2f; border-color: #844141; }
+
+    .history { margin: 0; padding: 0; list-style: none; max-height: 220px; overflow: auto; }
+    .history li { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #1d2f43; }
+    .history li:last-child { border-bottom: 0; }
+    .history time { flex: 0 0 66px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .history code { color: var(--accent); }
+    .history .fail code { color: var(--danger); }
+    .history .empty { color: var(--muted); }
+
+    .notes {
+      margin: 18px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .notes li {
+      min-width: 0;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #101d2c;
+      color: #aec1d4;
+      font-size: 12px;
+    }
+
+    @media (max-width: 760px) {
+      .shell { padding: 22px 16px 34px; }
+      .cards, .actions, .notes { grid-template-columns: 1fr; }
+      .header { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="header">
+      <div>
+        <h1>Nginx 负载均衡实验台</h1>
+        <p class="lead">反复点击或刷新页面，观察请求被转发到哪个后端；再用容器命令停掉一个实例，验证 Nginx 的被动健康检查。</p>
+      </div>
+      <div class="badge"><i></i><span id="backend">backend-1</span></div>
+    </header>
+
+    <section class="cards">
+      <article class="card"><span>本次后端</span><strong id="backend-value">--</strong></article>
+      <article class="card"><span>当前页面刷新数</span><strong id="view-count">--</strong></article>
+      <article class="card"><span>响应耗时</span><strong id="latency">--</strong></article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>请求记录</h2>
+        <span>保留最近 12 条</span>
+      </div>
+      <div class="panel-body">
+        <div class="actions">
+          <button id="single">单次请求</button>
+          <button id="burst">10 次连发</button>
+          <button class="danger" id="fault">模拟失败请求</button>
+        </div>
+        <ul class="history" id="history">
+          <li class="empty"><time> waiting </time><span>还没有请求记录</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <ul class="notes">
+      <li>用 <code>docker ps --filter name=ops-lab-nginx-backend</code> 找到后端容器名，再执行 <code>docker stop &lt;name&gt;</code>，观察状态变化。</li>
+      <li>恢复实验时执行 <code>docker start &lt;name&gt;</code>；也可以用 <code>make down PROFILE=lb</code> 清空本组服务。</li>
+    </ul>
+  </main>
+
+  <script>
+    let history = [];
+    const el = id => document.getElementById(id);
+    let backendId = '---';
+
+    function timestamp() {
+      return new Date().toLocaleTimeString('zh-CN', { hour12: false });
+    }
+
+    function render() {
+      const list = el('history');
+      list.innerHTML = '';
+      history.forEach(item => {
+        const li = document.createElement('li');
+        if (item.failed) li.className = 'fail';
+        const time = document.createElement('time');
+        const text = document.createElement('span');
+        time.textContent = item.time;
+        text.innerHTML = item.text;
+        li.append(time, text);
+        list.append(li);
+      });
+      if (!history.length) {
+        list.innerHTML = '<li class="empty"><time> waiting </time><span>还没有请求记录</span></li>';
+      }
+    }
+
+    function addHistory(text, failed = false) {
+      history.unshift({ time: timestamp(), text, failed });
+      if (history.length > 12) history.pop();
+      render();
+    }
+
+    async function call(path, failed = false) {
+      const start = performance.now();
+      try {
+        const response = await fetch(path, { cache: 'no-store' });
+        const elapsed = Math.round(performance.now() - start);
+        const upstream = response.headers.get('X-Upstream') || 'unknown';
+        addHistory(`<code>${path}</code> -> ${response.status}，${elapsed}ms，upstream ${upstream}`, failed);
+        return response.status;
+      } catch (error) {
+        addHistory(`<code>${path}</code> -> 网络异常`, true);
+        return 0;
+      }
+    }
+
+    async function singleRequest() {
+      el('single').disabled = true;
+      await call('/api/backend');
+      el('single').disabled = false;
+      updateStats();
+    }
+
+    async function burstRequests() {
+      el('burst').disabled = true;
+      const calls = Array.from({ length: 10 }, () => call('/api/backend'));
+      const results = await Promise.allSettled(calls);
+      const ok = results.filter(item => item.status === 'fulfilled' && item.value === 200).length;
+      addHistory(`<code>burst</code> -> 成功 ${ok}/10`);
+      el('burst').disabled = false;
+      updateStats();
+    }
+
+    async function faultRequest() {
+      el('fault').disabled = true;
+      await call('/api/backend?fault=1', true);
+      el('fault').disabled = false;
+      updateStats();
+    }
+
+    function updateStats() {
+      el('view-count').textContent = history.length;
+      const failCount = history.filter(item => item.failed).length;
+      el('latency').textContent = failCount ? `${Math.round(failCount / history.length * 100)}% 失败` : `${history.length} 成功`;
+    }
+
+    el('backend').textContent = backendId;
+    el('backend-value').textContent = backendId;
+    el('view-count').textContent = '0';
+    el('latency').textContent = '0 成功';
+    el('single').addEventListener('click', singleRequest);
+    el('burst').addEventListener('click', burstRequests);
+    el('fault').addEventListener('click', faultRequest);
+
+    async function identifyBackend() {
+      try {
+        const response = await fetch('/api/backend', { cache: 'no-store' });
+        backendId = response.headers.get('X-Upstream') || '---';
+      } catch (error) {
+        backendId = 'unavailable';
+      }
+      el('backend').textContent = backendId;
+      el('backend-value').textContent = backendId;
+    }
+
+    identifyBackend();
+  </script>
+</body>
 </html>

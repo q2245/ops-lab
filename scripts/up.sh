@@ -12,5 +12,5 @@ for p in "${LIST[@]}"; do
 done
 
 echo "启动 profiles: ${PROFILES}"
-docker compose -f "$COMPOSE_DIR/docker-compose.yml" --env-file "$COMPOSE_DIR/../.env" "${args[@]}" up -d --build
+docker compose --project-directory "$COMPOSE_DIR/.." -f "$COMPOSE_DIR/docker-compose.yml" --env-file "$COMPOSE_DIR/../.env" "${args[@]}" up -d
 echo "完成。查看状态：docker compose -f $COMPOSE_DIR/docker-compose.yml ${args[*]} ps"

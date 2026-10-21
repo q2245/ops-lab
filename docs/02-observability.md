@@ -10,6 +10,15 @@
 make up PROFILE=core
 ```
 
+打开 <http://localhost:8081>，这里是 Ops Lab 控制台。它把常用实验动作集中到一页：
+
+- 顶部显示应用健康状态。
+- 中间是请求总数、QPS、错误率、P95 延迟四张指标卡，数据来自 Prometheus API。
+- 下方按钮分别触发正常、慢、错误、混合请求。
+- 右侧提供 Grafana、Prometheus、Alertmanager、Jaeger、`/metrics` 和 `/healthz` 的入口。
+
+先点几次「10 次混合」，再到 Grafana 或 Prometheus 里看指标变化。这样能更清楚地把「页面上的现象」和「监控里的数据」对应起来。
+
 ### 四种指标类型
 
 | 类型 | 例子 | 什么时候用 |

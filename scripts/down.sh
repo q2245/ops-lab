@@ -11,4 +11,4 @@ for p in "${LIST[@]}"; do
   args+=(--profile "$p")
 done
 
-docker compose -f "$COMPOSE_DIR/docker-compose.yml" --env-file "$COMPOSE_DIR/../.env" "${args[@]}" down
+docker compose --project-directory "$COMPOSE_DIR/.." -f "$COMPOSE_DIR/docker-compose.yml" --env-file "$COMPOSE_DIR/../.env" "${args[@]}" down

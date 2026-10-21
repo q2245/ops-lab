@@ -36,17 +36,19 @@ make up PROFILE=core
 | Grafana | <http://localhost:3000> | admin / admin |
 | Prometheus | <http://localhost:9090> | 无 |
 | Alertmanager | <http://localhost:9093> | 无 |
-| 演示应用 | <http://localhost:8081> | 无 |
+| Ops Lab 控制台 | <http://localhost:8081> | 无 |
 
-### 2. 制造一些流量，让图表动起来
+### 2. 用控制台制造流量，让图表动起来
 
 ```bash
-curl http://localhost:8081/          # 正常请求
+open http://localhost:8081           # 深色控制台：指标、实验按钮、观测入口
 curl http://localhost:8081/slow      # 慢请求，看 P95 抬升
 curl http://localhost:8081/error     # 500 错误，触发告警规则
 ```
 
-或者压测：
+也可以在控制台里点「正常请求 / 慢请求 / 错误请求 / 10 次混合」。页面会从 Prometheus 实时读取请求总数、QPS、错误率和 P95 延迟。
+
+或者用命令压测：
 
 ```bash
 make stress
@@ -82,9 +84,11 @@ make up PROFILE=mq            # Kafka + RabbitMQ
 
 ```bash
 make up PROFILE=lb
-curl http://localhost:8080/      # Nginx 转发
-curl http://localhost/           # HAProxy 转发
+open http://localhost:18080       # Nginx 负载均衡实验台
+curl http://localhost/            # HAProxy 转发
 ```
+
+`http://localhost:18080/api/backend` 会返回 `X-Upstream` 响应头，实验台用它显示请求实际落在哪个后端。连续点「10 次连发」，再停掉一个 backend 容器，就能观察被动健康检查。
 
 HAProxy 状态页：<http://localhost:8404/stats>
 
@@ -123,3 +127,4 @@ make clean               # 全部清理（含数据卷）
 - 所有密码都是学习用的弱密码，不要照搬到任何真实环境。
 - `node-exporter` 在 macOS 上记的是 OrbStack Linux 虚拟机的指标，不是 macOS 本体。
 - 端口如果冲突，改 `.env` 里的对应变量即可。
+- Compose 的本地挂载使用固定路径；克隆到其他位置前，先搜索 `/Users/springchang/Downloads/ops-lab` 并替换成你的仓库绝对路径，或直接在仓库根目录执行 `make up`。
