@@ -1,4 +1,5 @@
 # 快捷命令
+export LAB_ROOT := $(CURDIR)
 COMPOSE := docker compose --project-directory $(CURDIR) -f $(CURDIR)/compose/docker-compose.yml --env-file $(CURDIR)/.env
 PROFILE ?= core
 

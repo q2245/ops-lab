@@ -4,6 +4,7 @@ set -euo pipefail
 
 PROFILES="${1:-core}"
 COMPOSE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../compose" && pwd)"
+export LAB_ROOT="$(cd "$COMPOSE_DIR/.." && pwd)"
 
 IFS=',' read -ra LIST <<< "$PROFILES"
 args=()
