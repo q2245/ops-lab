@@ -6,13 +6,15 @@
   <title>Nginx 负载均衡实验台</title>
   <style>
     :root {
-      --ink: #eef4fb;
-      --muted: #96a8bd;
-      --line: #24374f;
-      --panel: #122030;
-      --panel-soft: #182a3d;
-      --accent: #7fd7ff;
-      --danger: #ff8585;
+      --ink: #e8eff8;
+      --muted: #94a5ba;
+      --line: #23394f;
+      --panel: #12202f;
+      --panel-soft: #172a3c;
+      --accent: #46e2b1;
+      --accent-2: #5da8ff;
+      --warning: #ffcf6b;
+      --danger: #ff7f7f;
       --radius: 8px;
     }
 
@@ -22,188 +24,292 @@
       margin: 0;
       min-height: 100vh;
       color: var(--ink);
-      background: #08101a;
+      background: #091119;
       font: 14px/1.45 ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
     }
 
-    .shell {
-      width: min(940px, 100%);
-      margin: 0 auto;
-      padding: 32px 24px 44px;
-    }
+    .app { width: min(1180px, 100%); margin: 0 auto; padding: 28px 24px 44px; }
 
-    .header {
+    .topbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 16px;
-      margin-bottom: 22px;
+      padding-bottom: 22px;
     }
 
-    .badge {
-      min-height: 36px;
-      display: inline-flex;
-      align-items: center;
-      gap: 9px;
-      padding: 0 12px;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--panel);
-      color: var(--muted);
-      white-space: nowrap;
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      width: 40px; height: 40px;
+      border: 1px solid #2b4259; border-radius: 7px;
+      display: grid; place-items: center;
+      background: #172a3c; color: var(--accent); font-weight: 650;
     }
+    .brand-title { margin: 0; font-size: 18px; font-weight: 650; }
+    .brand-sub { margin: 1px 0 0; color: var(--muted); font-size: 12px; }
 
-    .badge i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
-
-    h1 { margin: 0; font-size: clamp(22px, 4vw, 32px); line-height: 1.15; letter-spacing: 0; }
-    .lead { max-width: 640px; margin: 10px 0 24px; color: #b6c7d9; }
-
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-      margin-bottom: 16px;
+    .status {
+      display: inline-flex; align-items: center; gap: 8px;
+      min-height: 36px; padding: 0 12px;
+      border: 1px solid var(--line); border-radius: var(--radius);
+      background: var(--panel); color: var(--muted); white-space: nowrap;
     }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+    .dot.ok { background: var(--accent); box-shadow: 0 0 0 3px rgba(70,226,177,.12); }
+    .dot.warn { background: var(--warning); box-shadow: 0 0 0 3px rgba(255,207,107,.12); }
+    .dot.bad { background: var(--danger); box-shadow: 0 0 0 3px rgba(255,127,127,.12); }
 
-    .card {
-      min-width: 0;
-      padding: 18px;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--panel);
+    .hero {
+      border: 1px solid var(--line); border-radius: var(--radius);
+      background: linear-gradient(115deg, #10202e, #16283b);
+      padding: 28px; margin-bottom: 18px;
     }
+    .hero h1 { margin: 0 0 10px; font-size: clamp(24px, 4vw, 36px); line-height: 1.12; letter-spacing: 0; }
+    .hero h1 span { color: var(--accent); }
+    .hero p { max-width: 690px; margin: 0; color: #b6c6d8; }
 
-    .card span { display: block; color: var(--muted); font-size: 12px; }
-    .card strong { display: block; margin-top: 8px; font-size: 22px; font-variant-numeric: tabular-nums; }
-
-    .panel {
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--panel);
-      overflow: hidden;
+    .summary { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 14px; margin-bottom: 18px; }
+    .metric {
+      min-width: 0; padding: 16px;
+      border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel);
     }
+    .metric span { display: block; color: var(--muted); font-size: 12px; }
+    .metric strong { display: block; margin-top: 7px; font-size: 22px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+    .metric small { display: block; margin-top: 3px; color: #6f819a; font-size: 11px; }
+    .metric strong[data-tone="bad"] { color: var(--danger); }
+    .metric strong[data-tone="warn"] { color: var(--warning); }
 
+    .layout { display: grid; grid-template-columns: minmax(0,1fr) 370px; gap: 16px; align-items: start; }
+    .panel { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); overflow: hidden; }
+    .panel + .panel { margin-top: 16px; }
     .panel-head {
-      min-height: 46px;
-      padding: 10px 16px;
-      border-bottom: 1px solid var(--line);
-      background: var(--panel-soft);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
+      min-height: 46px; padding: 10px 16px;
+      border-bottom: 1px solid var(--line); background: var(--panel-soft);
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
     }
-
     .panel-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
-    .panel-head span { color: var(--muted); font-size: 12px; }
+    .panel-head span { color: var(--muted); font-size: 12px; white-space: nowrap; }
     .panel-body { padding: 16px; }
 
-    .actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-
+    .controls { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
     button {
-      min-height: 40px;
-      border: 1px solid #2c4b65;
-      border-radius: 6px;
-      background: #1c3348;
-      color: var(--ink);
-      font: inherit;
-      font-weight: 500;
-      cursor: pointer;
+      min-height: 38px; border: 1px solid #2b4259; border-radius: 6px;
+      background: #1d3041; color: var(--ink); font: inherit; font-weight: 500; cursor: pointer;
     }
-
-    button:hover { background: #23405a; border-color: #3f6a8b; }
+    button:hover { background: #24394e; border-color: #3c5c7c; }
     button:disabled { opacity: .55; cursor: wait; }
-    button.danger { background: #472929; border-color: #683636; color: #ffdcdc; }
-    button.danger:hover { background: #552f2f; border-color: #844141; }
+    button.primary { background: #17493a; border-color: #23634f; color: #c9ffe9; }
+    button.primary:hover { background: #1a5a48; border-color: #2d7a64; }
+    button.warn { background: #45361b; border-color: #66491d; color: #ffe9bb; }
+    button.warn:hover { background: #52401f; border-color: #7d5a24; }
+    button.danger { background: #4a2525; border-color: #6d3232; color: #ffdede; }
+    button.danger:hover { background: #5a2b2b; border-color: #873b3b; }
 
-    .history { margin: 0; padding: 0; list-style: none; max-height: 220px; overflow: auto; }
-    .history li { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #1d2f43; }
-    .history li:last-child { border-bottom: 0; }
-    .history time { flex: 0 0 66px; color: var(--muted); font-variant-numeric: tabular-nums; }
-    .history code { color: var(--accent); }
-    .history .fail code { color: var(--danger); }
-    .history .empty { color: var(--muted); }
-
-    .notes {
-      margin: 18px 0 0;
-      padding: 0;
-      list-style: none;
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
+    .servers { display: grid; gap: 12px; }
+    .server {
+      border: 1px solid var(--line); border-radius: 6px; background: var(--panel-soft); padding: 14px;
     }
+    .server-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .server-name { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+    .server-name i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+    .server.active .server-name i { background: var(--accent); box-shadow: 0 0 0 3px rgba(70,226,177,.12); }
+    .server-stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin-top: 12px; }
+    .server-stat { min-width: 0; padding: 8px; border: 1px solid #20344a; border-radius: 5px; background: #10202d; }
+    .server-stat span { display: block; color: var(--muted); font-size: 11px; }
+    .server-stat strong { display: block; margin-top: 3px; font-size: 15px; font-variant-numeric: tabular-nums; }
+    .track { height: 7px; margin-top: 12px; border-radius: 99px; background: #10202d; overflow: hidden; }
+    .fill { height: 100%; width: 0; border-radius: 99px; background: var(--accent-2); transition: width .2s ease; }
 
-    .notes li {
-      min-width: 0;
-      padding: 14px;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      background: #101d2c;
-      color: #aec1d4;
-      font-size: 12px;
+    .events { margin: 0; padding: 0; list-style: none; max-height: 280px; overflow: auto; }
+    .events li { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #1d2f42; }
+    .events li:last-child { border-bottom: 0; }
+    .events time { flex: 0 0 68px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .events span { min-width: 0; color: #c9d5e4; }
+    .events .empty { color: var(--muted); }
+    .events code { color: var(--accent-2); }
+    .events .bad code { color: var(--danger); }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+    .runbook {
+      margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px;
     }
+    .runbook li {
+      min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 6px;
+      background: #101d2b; color: #aebfd1; font-size: 12px;
+    }
+    .runbook strong { display: block; margin-bottom: 5px; color: var(--ink); font-size: 13px; }
+    .runbook code { color: var(--accent-2); }
+    .links { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+    .link {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px;
+      background: var(--panel-soft); color: var(--ink); text-decoration: none;
+    }
+    .link:hover { border-color: #35567a; background: #1d3041; }
+    .link small { color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .note { margin: 14px 0 0; padding: 12px; border: 1px solid #264157; border-radius: 6px; background: #142235; color: #a9bcd2; font-size: 12px; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
-    @media (max-width: 760px) {
-      .shell { padding: 22px 16px 34px; }
-      .cards, .actions, .notes { grid-template-columns: 1fr; }
-      .header { flex-direction: column; align-items: flex-start; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .summary { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+    @media (max-width: 580px) {
+      .app { padding: 20px 14px 32px; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .summary, .controls, .server-stats, .grid-2, .runbook, .links { grid-template-columns: 1fr; }
+      .hero { padding: 22px; }
     }
   </style>
 </head>
 <body>
-  <main class="shell">
-    <header class="header">
-      <div>
-        <h1>Nginx 负载均衡实验台</h1>
-        <p class="lead">反复点击或刷新页面，观察请求被转发到哪个后端；再用容器命令停掉一个实例，验证 Nginx 的被动健康检查。</p>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">LB</div>
+        <div>
+          <h1 class="brand-title">Nginx 负载均衡实验台</h1>
+          <p class="brand-sub">upstream · passive health check · latency · distribution</p>
+        </div>
       </div>
-      <div class="badge"><i></i><span id="backend">backend-1</span></div>
+      <div class="status"><i class="dot ok" id="gateway-dot"></i><span id="gateway-status">ready</span></div>
     </header>
 
-    <section class="cards">
-      <article class="card"><span>本次后端</span><strong id="backend-value">--</strong></article>
-      <article class="card"><span>当前页面刷新数</span><strong id="view-count">--</strong></article>
-      <article class="card"><span>响应耗时</span><strong id="latency">--</strong></article>
+    <section class="hero">
+      <h1>把流量分配过程变成<span>看得见的实验</span></h1>
+      <p>每次请求都会读取 Nginx 返回的 upstream 地址、状态码、连接耗时和请求 ID。你可以连发流量观察分配，停掉一个后端验证被动健康检查，再用状态页核对 Nginx 自身的连接数。</p>
     </section>
 
-    <section class="panel">
-      <div class="panel-head">
-        <h2>请求记录</h2>
-        <span>保留最近 12 条</span>
+    <section class="summary" aria-label="请求统计">
+      <article class="metric"><span>总请求</span><strong id="stat-total">0</strong><small>页面发起的实验请求</small></article>
+      <article class="metric"><span>成功请求</span><strong id="stat-success">0</strong><small>HTTP 2xx</small></article>
+      <article class="metric"><span>错误请求</span><strong id="stat-error">0</strong><small>非 2xx / 网络异常</small></article>
+      <article class="metric"><span>平均耗时</span><strong id="stat-latency">--</strong><small>网关到页面</small></article>
+    </section>
+
+    <section class="layout">
+      <div>
+        <article class="panel">
+          <div class="panel-head"><h2>实验操作</h2><span>最多保留最近 30 条</span></div>
+          <div class="panel-body">
+            <div class="controls">
+              <button class="primary" id="single">单次请求</button>
+              <button id="burst">10 次连发</button>
+              <button id="burst-50">50 次压测</button>
+              <button class="danger" id="fault">模拟异常</button>
+            </div>
+            <p class="note">Nginx 配置了 <code>max_fails=3</code> 和 <code>fail_timeout=10s</code>。停掉一个后端后，先连发几次触发失败计数，再观察流量是否集中到另一个后端。</p>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><h2>请求记录</h2><span id="last-request">尚未执行</span></div>
+          <div class="panel-body">
+            <ul class="events" id="events">
+              <li class="empty"><time>waiting</time><span>还没有请求记录</span></li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><h2>状态码分布</h2><span>实验期间统计</span></div>
+          <div class="panel-body grid-2" id="status-cards"></div>
+        </article>
       </div>
+
+      <aside>
+        <article class="panel">
+          <div class="panel-head"><h2>后端分布</h2><span id="distribution-total">0 requests</span></div>
+          <div class="panel-body">
+            <div class="servers" id="servers"></div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><h2>Nginx 状态</h2><span id="status-updated">未刷新</span></div>
+          <div class="panel-body">
+            <div class="grid-2" id="nginx-status">
+              <div class="server-stat"><span>Active</span><strong>--</strong></div>
+              <div class="server-stat"><span>Reading</span><strong>--</strong></div>
+              <div class="server-stat"><span>Writing</span><strong>--</strong></div>
+              <div class="server-stat"><span>Waiting</span><strong>--</strong></div>
+              <div class="server-stat"><span>Accepted</span><strong>--</strong></div>
+              <div class="server-stat"><span>Handled</span><strong>--</strong></div>
+            </div>
+            <p class="note">状态页来自 Nginx <code>stub_status</code>，每 5 秒刷新一次。</p>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><h2>观测入口</h2><span>本机服务</span></div>
+          <div class="panel-body">
+            <nav class="links">
+              <a class="link" href="/api/backend" target="_blank" rel="noreferrer">API<small>X-Upstream</small></a>
+              <a class="link" href="/nginx_status" target="_blank" rel="noreferrer">stub_status<small>状态页</small></a>
+              <a class="link" href="http://localhost:8404/stats" target="_blank" rel="noreferrer">HAProxy<small>8404</small></a>
+              <a class="link" href="http://localhost:3000" target="_blank" rel="noreferrer">Grafana<small>3000</small></a>
+            </nav>
+          </div>
+        </article>
+      </aside>
+    </section>
+
+    <section class="panel" style="margin-top:16px">
+      <div class="panel-head"><h2>故障演练步骤</h2><span>本地 Compose 环境</span></div>
       <div class="panel-body">
-        <div class="actions">
-          <button id="single">单次请求</button>
-          <button id="burst">10 次连发</button>
-          <button class="danger" id="fault">模拟失败请求</button>
-        </div>
-        <ul class="history" id="history">
-          <li class="empty"><time> waiting </time><span>还没有请求记录</span></li>
+        <ul class="runbook">
+          <li><strong>确认容器名</strong><code>docker ps --filter name=ops-lab-backend</code></li>
+          <li><strong>停止 backend-a</strong><code>docker stop ops-lab-backend-a-1</code></li>
+          <li><strong>触发失败计数</strong>在页面连续点「10 次连发」三次，让 Nginx 记满 <code>max_fails=3</code>。</li>
+          <li><strong>观察恢复</strong><code>docker start ops-lab-backend-a-1</code>，等 <code>fail_timeout=10s</code> 后继续压测。</li>
+          <li><strong>查看 Nginx 日志</strong><code>docker logs --tail 100 ops-lab-nginx-1</code></li>
+          <li><strong>查看后端页面</strong><code>docker exec ops-lab-backend-a-1 ls /usr/share/nginx/html</code></li>
         </ul>
       </div>
     </section>
-
-    <ul class="notes">
-      <li>用 <code>docker ps --filter name=ops-lab-nginx-backend</code> 找到后端容器名，再执行 <code>docker stop &lt;name&gt;</code>，观察状态变化。</li>
-      <li>恢复实验时执行 <code>docker start &lt;name&gt;</code>；也可以用 <code>make down PROFILE=lb</code> 清空本组服务。</li>
-    </ul>
   </main>
 
   <script>
-    let history = [];
-    const el = id => document.getElementById(id);
-    let backendId = '---';
+    const maxEvents = 30;
+    const serverStats = new Map();
+    const statusStats = new Map();
+    let total = 0;
+    let success = 0;
+    let error = 0;
+    let latencySum = 0;
+    let events = [];
 
-    function timestamp() {
+    const el = id => document.getElementById(id);
+
+    function now() {
       return new Date().toLocaleTimeString('zh-CN', { hour12: false });
     }
 
-    function render() {
-      const list = el('history');
+    function parseStatus(raw) {
+      const values = {};
+      (raw || '').split(/\r?\n/).forEach(line => {
+        const match = line.match(/^(\w+):\s*([0-9]+)$/i);
+        if (match) values[match[1].toLowerCase()] = Number(match[2]);
+      });
+      return values;
+    }
+
+    function statusLabel(code) {
+      if (code === 0) return 'Network';
+      if (code >= 200 && code < 300) return String(code);
+      if (code >= 300 && code < 400) return String(code);
+      if (code >= 400 && code < 500) return String(code);
+      if (code >= 500) return String(code);
+      return 'Other';
+    }
+
+    function renderEvents() {
+      const list = el('events');
       list.innerHTML = '';
-      history.forEach(item => {
+      if (!events.length) {
+        list.innerHTML = '<li class="empty"><time>waiting</time><span>还没有请求记录</span></li>';
+        return;
+      }
+      events.forEach(item => {
         const li = document.createElement('li');
-        if (item.failed) li.className = 'fail';
+        if (item.failed) li.className = 'bad';
         const time = document.createElement('time');
         const text = document.createElement('span');
         time.textContent = item.time;
@@ -211,81 +317,190 @@
         li.append(time, text);
         list.append(li);
       });
-      if (!history.length) {
-        list.innerHTML = '<li class="empty"><time> waiting </time><span>还没有请求记录</span></li>';
+    }
+
+    function addEvent(text, failed = false) {
+      events.unshift({ time: now(), text, failed });
+      if (events.length > maxEvents) events.pop();
+      renderEvents();
+    }
+
+    function renderMetrics() {
+      el('stat-total').textContent = total;
+      el('stat-success').textContent = success;
+      const errorValue = el('stat-error');
+      errorValue.textContent = error;
+      errorValue.dataset.tone = error > 0 ? 'bad' : '';
+      el('stat-latency').textContent = total ? `${Math.round(latencySum / total)}ms` : '--';
+    }
+
+    function renderServers() {
+      const wrap = el('servers');
+      wrap.innerHTML = '';
+      if (!serverStats.size) {
+        wrap.innerHTML = '<div class="note">还没有 upstream 数据</div>';
+        return;
       }
+      [...serverStats.entries()].sort((a,b) => b[1].count - a[1].count).forEach(([name, stats]) => {
+        const card = document.createElement('article');
+        card.className = 'server' + (stats.failed ? ' failed' : ' active');
+        const head = document.createElement('div');
+        head.className = 'server-head';
+        const nameNode = document.createElement('div');
+        nameNode.className = 'server-name';
+        const dot = document.createElement('i');
+        const label = document.createElement('span');
+        label.textContent = name;
+        nameNode.append(dot, label);
+        const ratio = document.createElement('span');
+        const share = total ? Math.round(stats.count / total * 100) : 0;
+        ratio.textContent = `${share}%`;
+        head.append(nameNode, ratio);
+
+        const statsNode = document.createElement('div');
+        statsNode.className = 'server-stats';
+        [['Requests', stats.count], ['2xx', stats.success], ['Error', stats.failed]].forEach(([title, value]) => {
+          const item = document.createElement('div');
+          item.className = 'server-stat';
+          const t = document.createElement('span');
+          const v = document.createElement('strong');
+          t.textContent = title;
+          v.textContent = value;
+          item.append(t, v);
+          statsNode.append(item);
+        });
+
+        const track = document.createElement('div');
+        track.className = 'track';
+        const fill = document.createElement('div');
+        fill.className = 'fill';
+        fill.style.width = `${share}%`;
+        track.append(fill);
+        card.append(head, statsNode, track);
+        wrap.append(card);
+      });
+      el('distribution-total').textContent = `${total} requests`;
     }
 
-    function addHistory(text, failed = false) {
-      history.unshift({ time: timestamp(), text, failed });
-      if (history.length > 12) history.pop();
-      render();
+    function renderStatuses() {
+      const wrap = el('status-cards');
+      wrap.innerHTML = '';
+      if (!statusStats.size) {
+        wrap.innerHTML = '<div class="note">还没有状态码数据</div>';
+        return;
+      }
+      [...statusStats.entries()].sort((a,b) => b[1] - a[1]).forEach(([status, count]) => {
+        const item = document.createElement('div');
+        item.className = 'server-stat';
+        const title = document.createElement('span');
+        const value = document.createElement('strong');
+        title.textContent = status === 'Network' ? '网络异常' : `HTTP ${status}`;
+        value.textContent = `${count} 次`;
+        item.append(title, value);
+        wrap.append(item);
+      });
     }
 
-    async function call(path, failed = false) {
+    async function call(path, label) {
       const start = performance.now();
       try {
         const response = await fetch(path, { cache: 'no-store' });
         const elapsed = Math.round(performance.now() - start);
         const upstream = response.headers.get('X-Upstream') || 'unknown';
-        addHistory(`<code>${path}</code> -> ${response.status}，${elapsed}ms，upstream ${upstream}`, failed);
+        const upstreamStatus = response.headers.get('X-Upstream-Status') || response.status;
+        const upstreamTime = response.headers.get('X-Upstream-Response-Time') || 'n/a';
+        const requestId = response.headers.get('X-Request-Id') || 'n/a';
+        const ok = response.ok;
+
+        const stats = serverStats.get(upstream) || { count: 0, success: 0, failed: 0 };
+        stats.count += 1;
+        if (ok) stats.success += 1; else stats.failed += 1;
+        serverStats.set(upstream, stats);
+
+        const statusKey = statusLabel(response.status);
+        statusStats.set(statusKey, (statusStats.get(statusKey) || 0) + 1);
+        total += 1;
+        if (ok) success += 1; else error += 1;
+        latencySum += elapsed;
+
+        addEvent(
+          `<code>${label || path}</code> -> <code>${response.status}</code>，${elapsed}ms，upstream <code>${upstream}</code>，up ${upstreamStatus} / ${upstreamTime}s，rid ${requestId.slice(0, 8)}`,
+          !ok
+        );
+        renderAll();
         return response.status;
-      } catch (error) {
-        addHistory(`<code>${path}</code> -> 网络异常`, true);
+      } catch (err) {
+        const statusKey = 'Network';
+        statusStats.set(statusKey, (statusStats.get(statusKey) || 0) + 1);
+        total += 1;
+        error += 1;
+        addEvent(`<code>${label || path}</code> -> 网络异常`, true);
+        renderAll();
         return 0;
       }
     }
 
-    async function singleRequest() {
-      el('single').disabled = true;
-      await call('/api/backend');
-      el('single').disabled = false;
-      updateStats();
+    function renderAll() {
+      renderMetrics();
+      renderServers();
+      renderStatuses();
     }
 
-    async function burstRequests() {
-      el('burst').disabled = true;
-      const calls = Array.from({ length: 10 }, () => call('/api/backend'));
+    async function burst(count, buttonId) {
+      const button = el(buttonId);
+      button.disabled = true;
+      el('last-request').textContent = `${count} 次请求执行中`;
+      const calls = Array.from({ length: count }, (_, index) => call('/api/backend', `req-${index + 1}`));
       const results = await Promise.allSettled(calls);
-      const ok = results.filter(item => item.status === 'fulfilled' && item.value === 200).length;
-      addHistory(`<code>burst</code> -> 成功 ${ok}/10`);
-      el('burst').disabled = false;
-      updateStats();
+      const ok = results.filter(item => item.status === 'fulfilled' && item.value >= 200 && item.value < 300).length;
+      addEvent(`<code>burst</code> -> 成功 ${ok}/${count}`);
+      el('last-request').textContent = `${ok}/${count} 成功`;
+      button.disabled = false;
     }
 
-    async function faultRequest() {
-      el('fault').disabled = true;
-      await call('/api/backend?fault=1', true);
-      el('fault').disabled = false;
-      updateStats();
-    }
-
-    function updateStats() {
-      el('view-count').textContent = history.length;
-      const failCount = history.filter(item => item.failed).length;
-      el('latency').textContent = failCount ? `${Math.round(failCount / history.length * 100)}% 失败` : `${history.length} 成功`;
-    }
-
-    el('backend').textContent = backendId;
-    el('backend-value').textContent = backendId;
-    el('view-count').textContent = '0';
-    el('latency').textContent = '0 成功';
-    el('single').addEventListener('click', singleRequest);
-    el('burst').addEventListener('click', burstRequests);
-    el('fault').addEventListener('click', faultRequest);
-
-    async function identifyBackend() {
+    async function refreshStatus() {
       try {
-        const response = await fetch('/api/backend', { cache: 'no-store' });
-        backendId = response.headers.get('X-Upstream') || '---';
-      } catch (error) {
-        backendId = 'unavailable';
+        const response = await fetch('/nginx_status', { cache: 'no-store' });
+        const body = await response.text();
+        const values = parseStatus(body);
+        el('nginx-status').innerHTML = '';
+        ['active','reading','writing','waiting','accepts','handled'].forEach(key => {
+          const item = document.createElement('div');
+          item.className = 'server-stat';
+          const title = document.createElement('span');
+          const value = document.createElement('strong');
+          title.textContent = key;
+          value.textContent = values[key] !== undefined ? values[key] : '--';
+          item.append(title, value);
+          el('nginx-status').append(item);
+        });
+        el('status-updated').textContent = now();
+        el('gateway-dot').className = 'dot ok';
+        el('gateway-status').textContent = 'nginx ready';
+      } catch (err) {
+        el('gateway-dot').className = 'dot bad';
+        el('gateway-status').textContent = 'nginx unavailable';
       }
-      el('backend').textContent = backendId;
-      el('backend-value').textContent = backendId;
     }
 
-    identifyBackend();
+    el('single').addEventListener('click', async () => {
+      el('single').disabled = true;
+      el('last-request').textContent = '执行中';
+      const status = await call('/api/backend', 'single');
+      el('last-request').textContent = status === 200 ? '成功' : `失败 ${status}`;
+      el('single').disabled = false;
+    });
+    el('burst').addEventListener('click', () => burst(10, 'burst'));
+    el('burst-50').addEventListener('click', () => burst(50, 'burst-50'));
+    el('fault').addEventListener('click', async () => {
+      el('fault').disabled = true;
+      await call('/api/backend?scenario=missing', 'fault');
+      el('fault').disabled = false;
+    });
+
+    renderAll();
+    refreshStatus();
+    setInterval(refreshStatus, 5000);
   </script>
 </body>
 </html>
