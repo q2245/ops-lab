@@ -31,6 +31,7 @@ make up PROFILE=core
 | 入口 | 地址 | 账号 |
 |------|------|------|
 | Ops Lab 控制台 | <http://localhost:8081> | 无 |
+| Prometheus 观测台 | <http://localhost:8081/prometheus> | 无 |
 | Grafana | <http://localhost:3000> | admin / admin |
 | Prometheus | <http://localhost:9090> | 无 |
 | Alertmanager | <http://localhost:9093> | 无 |
@@ -130,7 +131,21 @@ make stress
 - 容器 CPU / 内存变化
 - 日志里是否出现 `trace_id`
 
-### 3. 看日志
+### 3. 用 Prometheus 观测台
+
+访问 <http://localhost:8081/prometheus>。这个页面把 Prometheus 原生 API 做成一屏可操作的观测台：
+
+| 区域 | 用途 |
+|------|------|
+| 指标卡 | 查看 UP 目标、QPS、错误率、P95、firing 告警和规则组数量 |
+| PromQL 查询 | 输入任意即时查询，或点 QPS、错误率、P95、CPU、容器内存等快捷按钮 |
+| 采集目标 | 确认每个 scrape job 是 UP 还是 DOWN |
+| 告警 | 查看 pending / firing 状态 |
+| 规则组 | 确认告警规则和 recording rules 已加载 |
+
+推荐练习：先在「采集目标」确认服务都为 UP；回到 Ops Lab 控制台点几次「10 次混合」；再回到观测台执行 QPS、错误率和 P95 查询。`rate(...[5m])` 需要样本积累，刚启动时等 15 到 30 秒；如果结果为 `NaN`，页面会显示 `--`。
+
+### 4. 看日志
 
 Grafana 里进入 Explore，选择 Loki：
 
@@ -144,7 +159,7 @@ Grafana 里进入 Explore，选择 Loki：
 {container="demo-app"} |= "simulated server error"
 ```
 
-### 4. 看告警
+### 5. 看告警
 
 访问 <http://localhost:9090/alerts> 和 <http://localhost:9093>。
 
@@ -154,7 +169,7 @@ Grafana 里进入 Explore，选择 Loki：
 compose/prometheus/rules/lab-alerts.yml
 ```
 
-### 5. 看链路
+### 6. 看链路
 
 启动 tracing：
 

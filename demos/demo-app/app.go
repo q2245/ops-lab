@@ -7,6 +7,7 @@
 //	GET /slow      人为制造约 2 秒延迟
 //	GET /error     人为返回 500
 //	GET /          正常请求，产生指标 + 日志
+//	GET /prometheus Prometheus 可视化控制台
 //	GET /metrics   Prometheus 抓取入口
 //	POST /alerts   接收 Alertmanager / Grafana webhook
 package main
@@ -82,6 +83,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("read embedded index: %v", err)
 	}
+	prometheusPage, err := staticFS.ReadFile("static/prometheus.html")
+	if err != nil {
+		log.Fatalf("read embedded prometheus page: %v", err)
+	}
 
 	assets := http.FileServer(http.FS(staticFS))
 	mux.Handle("/static/", http.StripPrefix("/static/", assets))
@@ -95,6 +100,13 @@ func main() {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-store")
 		_, _ = w.Write(page)
+	})
+
+	mux.HandleFunc("/prometheus", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("trace_id=%s handled GET /prometheus page", fakeTraceID())
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-store")
+		_, _ = w.Write(prometheusPage)
 	})
 
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {

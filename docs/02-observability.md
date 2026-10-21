@@ -19,6 +19,34 @@ make up PROFILE=core
 
 先点几次「10 次混合」，再到 Grafana 或 Prometheus 里看指标变化。这样能更清楚地把「页面上的现象」和「监控里的数据」对应起来。
 
+### Prometheus 观测台
+
+访问 <http://localhost:8081/prometheus>。它复用 demo-app，不额外增加容器，页面数据直接来自 Prometheus 原生 API：
+
+- `/api/v1/query`：执行 PromQL，并刷新 QPS、错误率、P95
+- `/api/v1/targets`：查看所有采集目标是否 UP
+- `/api/v1/alerts`：查看 pending / firing 告警
+- `/api/v1/rules`：查看告警规则和 recording rules 是否加载成功
+
+页面布局分为四块：
+
+1. **指标卡**：UP 目标、QPS、错误率、P95、firing 告警、规则组数量，每 15 秒自动刷新。
+2. **PromQL 查询台**：输入任意即时查询，也可以点快捷按钮执行 QPS、错误率、P95、CPU、容器内存等常用语句。
+3. **采集目标与告警**：先看 target 是否 DOWN，再看告警处于 pending 还是 firing。
+4. **规则组与学习方法**：确认规则加载情况，并按照「确认 target -> 制造流量 -> 观察 QPS -> 观察 P95 -> 触发告警 -> 读原始指标」的顺序练习。
+
+推荐操作：
+
+```text
+1. 打开 Prometheus 观测台，确认所有 target 都是 up。
+2. 回到 Ops Lab 控制台，点几次「10 次混合」。
+3. 回到观测台，点 QPS、错误率、P95 快捷查询。
+4. 持续触发错误请求，观察 DemoAppHighErrorRate 的状态变化。
+5. 打开 demo metrics，对照 PromQL 结果和原始时间序列。
+```
+
+注意：`rate(...[5m])` 需要至少两个采样点。服务刚启动后等 15 到 30 秒再查询；如果返回 `NaN`，页面会显示 `--`。
+
 ### 四种指标类型
 
 | 类型 | 例子 | 什么时候用 |
