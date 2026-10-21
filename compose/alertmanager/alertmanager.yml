@@ -1,0 +1,48 @@
+# 告警路由：先理解 route(路由树) + receivers(接收器) + inhibit_rules(抑制)
+global:
+  resolve_timeout: 5m
+
+route:
+  # 默认分组：按告警名和实例聚合，避免一次抖动刷出几百条消息
+  group_by: ["alertname", "instance"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 3h
+  receiver: default
+  routes:
+    # critical 单独走一条路，重复间隔更短
+    - matchers:
+        - severity = critical
+      receiver: critical
+      repeat_interval: 30m
+      continue: true
+    # 演练用的静默通道，方便你观察「没有通知时是不是真的没触发」
+    - matchers:
+        - env = lab
+      receiver: lab-webhook
+      repeat_interval: 1h
+
+receivers:
+  - name: default
+    # 本地没有邮件服务，这里用 webhook 指向一个通用的测试接收端
+    webhook_configs:
+      - url: http://demo-app:8081/alerts
+        send_resolved: true
+
+  - name: critical
+    webhook_configs:
+      - url: http://demo-app:8081/alerts
+        send_resolved: true
+
+  - name: lab-webhook
+    webhook_configs:
+      - url: http://demo-app:8081/alerts
+        send_resolved: true
+
+inhibit_rules:
+  # 同一实例已经 critical 了，就不再重复发 warning
+  - source_matchers:
+      - severity = critical
+    target_matchers:
+      - severity = warning
+    equal: ["alertname", "instance"]

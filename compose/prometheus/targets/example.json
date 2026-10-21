@@ -1,0 +1,10 @@
+[
+  {
+    "targets": ["demo-app:8081"],
+    "labels": {
+      "env": "lab",
+      "role": "demo",
+      "source": "file_sd"
+    }
+  }
+]

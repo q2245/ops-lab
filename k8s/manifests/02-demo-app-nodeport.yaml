@@ -1,0 +1,15 @@
+# NodePort 暴露：对应 kind-config.yaml 里的 extraPortMappings 30080
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-app-nodeport
+  namespace: ops-lab
+spec:
+  type: NodePort
+  selector:
+    app: demo-app
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8081
+      nodePort: 30080

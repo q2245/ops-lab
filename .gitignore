@@ -1,0 +1,10 @@
+.DS_Store
+.env.local
+
+# Local runtime data
+compose/data/
+*.pid
+*.log
+
+# Temporary editor files
+*.swp

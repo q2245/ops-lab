@@ -1,0 +1,143 @@
+# 部署一个三副本的演示应用，练习 Deployment / Service / PodDisruptionBudget
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-app
+  namespace: ops-lab
+  labels:
+    app: demo-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: demo-app
+  template:
+    metadata:
+      labels:
+        app: demo-app
+    spec:
+      # Pod 反亲和：把三个副本尽量打散到不同节点，观察调度行为
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: demo-app
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: demo-app
+          image: python:3.12-alpine
+          command: ["sh", "-c", "pip install -q flask==3.1.1 prometheus-client==0.22.1 && python /app/app.py"]
+          ports:
+            - containerPort: 8081
+              name: http
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: demo-app
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          volumeMounts:
+            - name: app-code
+              mountPath: /app
+      volumes:
+        - name: app-code
+          configMap:
+            name: demo-app-code
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-app-code
+  namespace: ops-lab
+data:
+  app.py: |
+    import time, random, logging, sys
+    from flask import Flask
+    from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+
+    logging.basicConfig(level=logging.INFO, stream=sys.stdout,
+                        format="%(asctime)s %(levelname)s %(message)s")
+    logger = logging.getLogger("demo-app")
+
+    REQ = Counter("demo_http_requests_total", "HTTP requests", ["method", "path", "status"])
+    LAT = Histogram("demo_http_request_duration_seconds", "Latency", ["method", "path"],
+                    buckets=(0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10))
+
+    app = Flask(__name__)
+
+    @app.before_request
+    def _s():
+        global _t0
+        _t0 = time.time()
+
+    @app.after_request
+    def _r(resp):
+        p, m = request.path, request.method
+        LAT.labels(method=m, path=p).observe(time.time() - _t0)
+        REQ.labels(method=m, path=p, status=resp.status_code).inc()
+        return resp
+
+    @app.route("/")
+    def index():
+        logger.info("hello from %s", __import__("socket").gethostname())
+        return {"ok": True, "pod": __import__("socket").gethostname()}
+
+    @app.route("/healthz")
+    def healthz():
+        return {"ok": True}
+
+    @app.route("/readyz")
+    def readyz():
+        return {"ok": True}
+
+    @app.route("/metrics")
+    def metrics():
+        return generate_latest(), 200, {"Content-Type": CONTENT_TYPE_LATEST}
+
+    if __name__ == "__main__":
+        app.run(host="0.0.0.0", port=8081, threaded=True)
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-app
+  namespace: ops-lab
+  labels:
+    app: demo-app
+spec:
+  selector:
+    app: demo-app
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8081
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: demo-app
+  namespace: ops-lab
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: demo-app

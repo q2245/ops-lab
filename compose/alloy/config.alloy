@@ -1,0 +1,79 @@
+// Alloy 采集配置：从 Docker 容器收集日志、抓取容器指标，并转发到 Loki / Prometheus
+// 学习重点：discovery(发现) -> relabel(改写标签) -> scrape(采集) -> write(写出)
+
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+// ---------- 日志：发现所有容器并采集 stdout/stderr ----------
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "project"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_log_stream"]
+    target_label  = "stream"
+  }
+}
+
+loki.source.docker "containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.containers.output
+  labels     = { job = "docker", lab = "ops-lab" }
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+
+// ---------- 指标：抓取带 prometheus 标签的容器 ----------
+discovery.relabel "metrics" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_label_prometheus_scrape"]
+    regex         = "true"
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_prometheus_port"]
+    target_label  = "__address__"
+    regex         = "(.*)"
+    replacement   = "$1"
+  }
+}
+
+prometheus.scrape "containers" {
+  targets    = discovery.relabel.metrics.output
+  forward_to = [prometheus.remote_write.local.receiver]
+}
+
+prometheus.remote_write "local" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+}

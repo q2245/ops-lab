@@ -1,0 +1,21 @@
+[mysqld]
+# 慢查询与日志：排查慢 SQL 的第一步
+slow_query_log = 1
+long_query_time = 1
+slow_query_log_file = /var/log/mysql/slow.log
+log_error = /var/log/mysql/error.log
+
+# binlog：主从复制、数据恢复、审计都靠它
+server-id = 1
+log_bin = mysql-bin
+binlog_format = ROW
+binlog_row_image = FULL
+expire_logs_days = 7
+
+# InnoDB 基础调参，观察 buffer pool 命中率
+innodb_buffer_pool_size = 256M
+innodb_flush_log_at_trx_commit = 1
+
+max_connections = 200
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci

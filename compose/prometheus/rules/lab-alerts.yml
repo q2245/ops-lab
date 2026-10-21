@@ -1,0 +1,75 @@
+# 告警规则：先理解「表达式 + for + labels/annotations」这三件事
+groups:
+  - name: lab-basic
+    rules:
+      # 采集目标挂了，这是最基础也最重要的一条告警
+      - alert: TargetDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "采集目标 {{ $labels.instance }} 已下线"
+          description: "job={{ $labels.job }} 的目标连续 1 分钟不可达。"
+
+      # 宿主机内存使用率超过 85%
+      - alert: HostHighMemory
+        expr: |
+          100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "主机内存使用率超过 85%"
+          description: "instance={{ $labels.instance }}，当前值 {{ printf \"%.1f\" $value }}%。"
+
+      # 宿主机磁盘剩余空间不足 15%
+      - alert: HostDiskSpaceLow
+        expr: |
+          (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} /
+           node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) * 100 < 15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "磁盘剩余空间不足 15%"
+          description: "mountpoint={{ $labels.mountpoint }}，剩余 {{ printf \"%.1f\" $value }}%。"
+
+      # 容器重启次数异常，练习 increase() 的用法
+      - alert: ContainerRestarting
+        expr: increase(container_start_time_seconds[10m]) > 0
+        for: 0m
+        labels:
+          severity: info
+        annotations:
+          summary: "容器 {{ $labels.name }} 最近重启过"
+
+      # HTTP 探测失败，练习 blackbox 指标
+      - alert: ProbeFailed
+        expr: probe_success == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "探测失败：{{ $labels.instance }}"
+
+  - name: lab-slo
+    rules:
+      # 示例 SLO：demo-app 5 分钟错误率超过 5%
+      - alert: DemoAppHighErrorRate
+        expr: |
+          sum(rate(demo_http_requests_total{status=~"5.."}[5m]))
+          /
+          sum(rate(demo_http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "demo-app 5xx 错误率超过 5%"
+
+      # 记录规则：预先算好 QPS，Dashboard 查询更快，也是 SLO 的常见做法
+      - record: job:demo_http_requests:rate5m
+        expr: sum by (job) (rate(demo_http_requests_total[5m]))
+
+      - record: instance:p95_latency:rate5m
+        expr: histogram_quantile(0.95, sum by (le, instance) (rate(demo_http_request_duration_seconds_bucket[5m])))

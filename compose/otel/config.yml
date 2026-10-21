@@ -1,0 +1,57 @@
+# OpenTelemetry Collector：接收 -> 处理 -> 导出
+# 学习重点：receivers / processors / exporters / pipelines 四段式结构
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # 限制内存，防止本地被 OOM
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 400
+    spike_limit_mib: 100
+
+  # 批量发送，减少网络开销
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+
+  # 给所有数据打上环境标签，生产里常用来区分集群/机房
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: ops-lab
+        action: upsert
+
+exporters:
+  # 链路数据发给 Jaeger
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+  # 调试输出，排查「数据到底有没有进来」时很有用
+  debug:
+    verbosity: basic
+
+  # 暴露 Collector 自身指标，供 Prometheus 抓取
+  prometheus:
+    endpoint: 0.0.0.0:8889
+
+service:
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlp/jaeger, debug]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [prometheus, debug]

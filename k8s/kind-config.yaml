@@ -1,0 +1,35 @@
+# kind 多节点集群：1 control-plane + 2 worker
+# 学习重点：多节点调度、节点亲和、污点容忍、网络策略都需要多个节点
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: ops-lab
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true,topology.kubernetes.io/zone=lab-a"
+    extraPortMappings:
+      # 把 NodePort 映射到本机，练习 Service 暴露
+      - containerPort: 30080
+        hostPort: 30080
+        protocol: TCP
+      - containerPort: 30443
+        hostPort: 30443
+        protocol: TCP
+  - role: worker
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "topology.kubernetes.io/zone=lab-a"
+  - role: worker
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "topology.kubernetes.io/zone=lab-b"

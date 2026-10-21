@@ -1,0 +1,68 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    lab: ops-lab
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+scrape_configs:
+  # Prometheus 自己，用于理解 up / scrape_duration_seconds 这类元指标
+  - job_name: prometheus
+    static_configs:
+      - targets: ["prometheus:9090"]
+
+  # 宿主机指标（macOS 上记的是 OrbStack Linux 虚拟机，不是 macOS 本体）
+  - job_name: node
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  # 容器指标
+  - job_name: cadvisor
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  # 业务应用指标，练习自己写 /metrics
+  - job_name: demo-app
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["demo-app:8081"]
+
+  # 中间件指标：默认关闭，学到哪开到哪
+  - job_name: redis
+    static_configs:
+      - targets: ["redis-exporter:9121"]
+
+  - job_name: mysql
+    static_configs:
+      - targets: ["mysqld-exporter:9104"]
+
+  - job_name: blackbox-http
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - http://demo-app:8081/healthz
+          - http://grafana:3000/api/health
+          - http://prometheus:9090/-/ready
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # 从文件动态加载目标，练习 file_sd 与热更新
+  - job_name: file-sd-demo
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets/*.json
+        refresh_interval: 30s
